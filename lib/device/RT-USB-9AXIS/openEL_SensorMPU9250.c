@@ -27,8 +27,14 @@
 #include <getopt.h>
 
 /* 9軸センサモジュールに対応するデバイスファイル */
-//static char serial_port[128] = "/dev/ttyACM0" ;
-static char serial_port[128] = "/dev/cu.usbmodem9AXIS_01" ;
+
+#ifdef __MACH__
+static char serial_port[128] = "/dev/ttyACM0" ;
+#endif
+
+#ifdef __linux__
+static char serial_port[128] = "/dev/ttyS2" ;
+#endif
 
 #define BAUDRATE B115200 //ボーレートの設定
 
@@ -80,14 +86,21 @@ static HALRETURNCODE_T fncInit3(HALCOMPONENT_T *pHalComponent,HAL_ARGUMENT_T *pC
 			pHalComponent->halId.instanceId );
 
 	if(!(fd = open(serial_port, O_RDWR ))) return HAL_ERROR; /* デバイスをオープンする */
-//	ioctl(fd, TCGETS, &oldtio);       /* 現在のシリアルポートの設定を待避 */
+	#ifdef __linux__
+	ioctl(fd, TCGETS, &oldtio);       /* 現在のシリアルポートの設定を待避 */
+	#endif
+
 	tcgetattr(fd, &oldtio);
 	bzero(&newtio, sizeof(newtio));
 	newtio = oldtio;                  /* ポートの設定をコピー */
 	cfmakeraw(&newtio);
 	cfsetispeed(&newtio, BAUDRATE);
 	cfsetospeed(&newtio, BAUDRATE);
-//	ioctl(fd, TCSETS, &newtio);       /* ポートの設定を有効にする */
+
+	#ifdef __linux__
+	ioctl(fd, TCSETS, &newtio);       /* ポートの設定を有効にする */
+	#endif
+
 	tcsetattr(fd, TCSANOW, &newtio);
 
 	int32_t concatenation, i, j=0, k=0, value[100][10];
